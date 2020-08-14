@@ -12,6 +12,7 @@ import shogi.KIF
 import imageio
 from PIL import Image, ImageDraw
 from numpy import array
+from pygifsicle import optimize
 
 DEFAULT_GIF_PATH = 'output.gif'
 
@@ -149,6 +150,7 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
     if last_delay < delay:
         last_delay = delay
     imageio.mimsave(gif_path, imgs, duration=[delay] * (len(imgs) - 1) + [last_delay], subrectangles=True)
+    optimize(gif_path)
     return gif_path
 
 

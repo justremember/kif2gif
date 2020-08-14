@@ -1,4 +1,9 @@
+flask
+python-dotenv
+flask-wtf
+
 python-shogi
 pillow
 numpy
 imageio
+pygifsicle
