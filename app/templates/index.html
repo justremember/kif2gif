@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Kif To Gif Converter</h1>
+    <form action="" method="post" novalidate>
+      {{ form.csrf_token }}
+        <p>
+            {{ form.kifu.label }}<br>
+            {{ form.kifu }}
+        </p>
+        <p>
+            {{ form.delay.label }}<br>
+            {{ form.delay }}
+        </p>
+        <p>
+            {{ form.start.label }}<br>
+            {{ form.start }}
+        </p>
+        <p>
+            {{ form.end.label }}<br>
+            {{ form.end }}
+        </p>
+        <p>{{ form.submit }}</p>
+    </form>
+{% endblock %}
