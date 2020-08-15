@@ -7,10 +7,11 @@ import re
 import datetime
 import argparse
 import os
+import cjkwrap
 
 import shogi.KIF
 import imageio
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from numpy import array
 from pygifsicle import optimize
 
@@ -41,6 +42,8 @@ AIR_MARGIN = (4, 4) # arbitrary
 MOCHI_SIZE = (170, 200) # dependent on the mochi image
 MOCHI_MARGIN = (0, 4) # arbitrary
 
+FONT_SIZE = 16
+
 IMAGE_SIZE = (BOARD_SIZE[0] + MOCHI_SIZE[0] * 2 + AIR_MARGIN[0] * 4, BOARD_SIZE[1] + AIR_MARGIN[1] * 2)
 BOARD_COORD = (MOCHI_SIZE[0] + AIR_MARGIN[0] * 2, AIR_MARGIN[1])
 CORNER_COORD = add_c(BOARD_COORD, BOARD_MARGIN)
@@ -52,6 +55,11 @@ SENTE_MOCHI_COORD = add_c(AIR_MARGIN,
 GOTE_MOCHI_PIECE_COORD = add_c(GOTE_MOCHI_COORD, MOCHI_MARGIN)
 SENTE_MOCHI_PIECE_COORD = add_c(SENTE_MOCHI_COORD, MOCHI_MARGIN)
 MOCHI_PIECE_DIST = (MOCHI_SIZE[0] // 2, SQUARE_SIZE[1])
+
+SENTE_NAME_COORD = add_c(SENTE_MOCHI_COORD, (0, -AIR_MARGIN[1] * 2 - FONT_SIZE))
+GOTE_NAME_COORD = add_c(GOTE_MOCHI_COORD, (0, MOCHI_SIZE[1]))
+TEXT_CHARS_PER_LINE = int(MOCHI_SIZE[0] / (FONT_SIZE / 1.9)) # this formula isnt right but im too lazy to fixed it
+TEXT_SPACING = FONT_SIZE * 1.15
 
 mochi_offsets = {
         'p': (0, 3), 'l': (1, 2), 'n': (0, 2), 's': (1, 1), 'g': (0, 1), 'b': (1, 0), 'r': (0, 0)
@@ -126,21 +134,24 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
         draw.line(add_c(line_start, BOARD_COORD) + add_c(line_end, BOARD_COORD), fill="#ffffff")
     """
 
+    font = ImageFont.truetype("assets/NotoSansMonoCJKjp-Regular.otf", FONT_SIZE)
+
     board = shogi.Board()
     imgs = []
     num_moves = 0
     
     if start <= num_moves and num_moves <= end:
-        img = render_position(str(board), empty_board.copy())
+        img = render_position(str(board), empty_board.copy(), kif, font)
         imgs.append(array(img))
     num_moves += 1
 
+    print('Turning positions to pngs...')
     for move in kif[0]['moves']:
         #print(move)
         board.push_usi(move)
         #print(board)
         if start <= num_moves and num_moves <= end:
-            img = render_position(str(board), empty_board.copy())
+            img = render_position(str(board), empty_board.copy(), kif, font)
             imgs.append(array(img))
         num_moves += 1
     if not gif_filename:
@@ -152,13 +163,15 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
     else:
         duration_list = [1]
 
+    print('Compiling pngs to gif...')
     imageio.mimsave(gif_path, imgs, duration=duration_list, subrectangles=True)
+    print('Optimizing gif filesize...')
     optimize(gif_path)
     return gif_path
 
 
 
-def render_position(pos, board):
+def render_position(pos, board, kif, font):
     rows = pos.split('\n')
 
     # render bangoma
@@ -195,6 +208,19 @@ def render_position(pos, board):
                 board.paste(piece_image,
                         add_c(coord, (ident_mochi_offset * i, 0)),
                         piece_image)
+
+    # render text
+    draw = ImageDraw.Draw(board)
+    sente_text = '☗' + kif[0]['names'][0]
+    gote_text = '☖' + kif[0]['names'][1]
+
+    text_lines = cjkwrap.wrap(sente_text, TEXT_CHARS_PER_LINE)
+    for i, text_line in enumerate(text_lines):
+        draw.text(add_c(SENTE_NAME_COORD, (0, TEXT_SPACING * (i - len(text_lines) + 1))), text_line, '#000', font=font)
+    text_lines = cjkwrap.wrap(gote_text, TEXT_CHARS_PER_LINE)
+    for i, text_line in enumerate(text_lines):
+        draw.text(add_c(GOTE_NAME_COORD, (0, TEXT_SPACING * i)), text_line, '#000', font=font)
+
 
     return board
 
