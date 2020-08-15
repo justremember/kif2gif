@@ -1,6 +1,7 @@
 flask
 python-dotenv
 flask-wtf
+gunicorn
 
 python-shogi
 pillow
