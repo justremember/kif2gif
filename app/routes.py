@@ -19,6 +19,6 @@ def index():
 
 @app.route('/gifs/<path:filename>')
 def download_file(filename):
-    return send_from_directory(app.config['GIFS_FOLDER'],
-        filename, as_attachment=True)
+    return send_from_directory('../' + app.config['GIFS_FOLDER'],
+        filename)
 
