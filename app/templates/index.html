@@ -9,16 +9,20 @@
             {{ form.kifu(rows='10', cols='50') }}
         </p>
         <p>
-            {{ form.delay.label }}<br>
-            {{ form.delay }}
-        </p>
-        <p>
             {{ form.start.label }}<br>
             {{ form.start }}
         </p>
         <p>
             {{ form.end.label }}<br>
             {{ form.end }}
+        </p>
+        <p>
+            {{ form.delay.label }}<br>
+            {{ form.delay }}
+        </p>
+        <p>
+            {{ form.final_delay.label }}<br>
+            {{ form.final_delay }}
         </p>
         <p>{{ form.submit() }}</p>
         <p>After clicking submit, please be patient. It will take several seconds to create the GIF file. Do not refresh.

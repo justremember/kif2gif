@@ -10,6 +10,7 @@ def index():
         gif_filename = kif2gif(form.kifu.data,
                 gif_dirname=app.config['GIFS_FOLDER'],
                 delay=form.delay.data,
+                final_delay=form.final_delay.data,
                 start=form.start.data,
                 end=form.end.data)
         return redirect(gif_filename)

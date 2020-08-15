@@ -100,7 +100,7 @@ pieces_dict = {
     }
 
 
-def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1):
+def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1, final_delay=5):
     if start > end:
         raise ValueError
     kif = shogi.KIF.Parser.parse_str(re.sub(' +', ' ', input_kif))
@@ -146,10 +146,7 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
     if not gif_filename:
         gif_filename = str(datetime.datetime.now()).replace(' ', '_').replace(':', '-').replace('.', '-') + '.gif'
     gif_path = os.path.join(gif_dirname, gif_filename)
-    last_delay = 5
-    if last_delay < delay:
-        last_delay = delay
-    imageio.mimsave(gif_path, imgs, duration=[delay] * (len(imgs) - 1) + [last_delay], subrectangles=True)
+    imageio.mimsave(gif_path, imgs, duration=[delay] * (len(imgs) - 1) + [final_delay], subrectangles=True)
     optimize(gif_path)
     return gif_path
 
