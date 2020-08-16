@@ -58,7 +58,7 @@ MOCHI_PIECE_DIST = (MOCHI_SIZE[0] // 2, SQUARE_SIZE[1])
 
 SENTE_NAME_COORD = add_c(SENTE_MOCHI_COORD, (0, -AIR_MARGIN[1] * 2 - FONT_SIZE))
 GOTE_NAME_COORD = add_c(GOTE_MOCHI_COORD, (0, MOCHI_SIZE[1]))
-TEXT_CHARS_PER_LINE = int(MOCHI_SIZE[0] / (FONT_SIZE / 1.9)) # this formula isnt right but im too lazy to fixed it
+TEXT_CHARS_PER_LINE = int(MOCHI_SIZE[0] / (FONT_SIZE / 2)) # the ' / 2' is based on the width of the char
 TEXT_SPACING = FONT_SIZE * 1.15
 
 mochi_offsets = {
@@ -211,14 +211,16 @@ def render_position(pos, board, kif, font):
 
     # render text
     draw = ImageDraw.Draw(board)
-    sente_text = '☗' + kif[0]['names'][0]
-    gote_text = '☖' + kif[0]['names'][1]
+    sente_text = '|(' + kif[0]['names'][0]
+    sente_text_wrapped = cjkwrap.wrap(sente_text, TEXT_CHARS_PER_LINE)
+    sente_text_wrapped[0] = sente_text_wrapped[0].replace('|(', '☗')
+    for i, text_line in enumerate(sente_text_wrapped):
+        draw.text(add_c(SENTE_NAME_COORD, (0, TEXT_SPACING * (i - len(sente_text_wrapped) + 1))), text_line, '#000', font=font)
 
-    text_lines = cjkwrap.wrap(sente_text, TEXT_CHARS_PER_LINE)
-    for i, text_line in enumerate(text_lines):
-        draw.text(add_c(SENTE_NAME_COORD, (0, TEXT_SPACING * (i - len(text_lines) + 1))), text_line, '#000', font=font)
-    text_lines = cjkwrap.wrap(gote_text, TEXT_CHARS_PER_LINE)
-    for i, text_line in enumerate(text_lines):
+    gote_text = '|(' + kif[0]['names'][1]
+    gote_text_wrapped = cjkwrap.wrap(gote_text, TEXT_CHARS_PER_LINE)
+    gote_text_wrapped[0] = gote_text_wrapped[0].replace('|(', '☖')
+    for i, text_line in enumerate(gote_text_wrapped):
         draw.text(add_c(GOTE_NAME_COORD, (0, TEXT_SPACING * i)), text_line, '#000', font=font)
 
 
