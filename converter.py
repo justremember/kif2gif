@@ -128,7 +128,7 @@ def wrap_fix(s, n):
     return '\n'.join(cjkwrap.wrap(s, n, replace_whitespace=False)).split('\n')
 
 
-def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1, start_delay=1, final_delay=5):
+def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1, start_delay=1.5, final_delay=5):
     if start > end:
         raise ValueError
     kif = shogi.KIF.Parser.parse_str(re.sub(' +', ' ', input_kif))[0]
@@ -185,7 +185,7 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
     gif_path = os.path.join(gif_dirname, gif_filename)
 
     if len(imgs) > 1:
-        duration_list = [start_delay] * (len(imgs) - 2) + [final_delay]
+        duration_list = [start_delay] + [delay] * (len(imgs) - 2) + [final_delay]
     else:
         duration_list = [1]
 
