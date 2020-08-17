@@ -42,7 +42,8 @@ AIR_MARGIN = (4, 4) # arbitrary
 MOCHI_SIZE = (170, 200) # dependent on the mochi image
 MOCHI_MARGIN = (0, 4) # arbitrary
 
-FONT_SIZE = 16
+FONT_SIZE_NAME = 16
+FONT_SIZE_META = 12
 
 IMAGE_SIZE = (BOARD_SIZE[0] + MOCHI_SIZE[0] * 2 + AIR_MARGIN[0] * 4, BOARD_SIZE[1] + AIR_MARGIN[1] * 2)
 BOARD_COORD = (MOCHI_SIZE[0] + AIR_MARGIN[0] * 2, AIR_MARGIN[1])
@@ -56,10 +57,12 @@ GOTE_MOCHI_PIECE_COORD = add_c(GOTE_MOCHI_COORD, MOCHI_MARGIN)
 SENTE_MOCHI_PIECE_COORD = add_c(SENTE_MOCHI_COORD, MOCHI_MARGIN)
 MOCHI_PIECE_DIST = (MOCHI_SIZE[0] // 2, SQUARE_SIZE[1])
 
-SENTE_NAME_COORD = add_c(SENTE_MOCHI_COORD, (0, -AIR_MARGIN[1] * 2 - FONT_SIZE))
+SENTE_NAME_COORD = add_c(SENTE_MOCHI_COORD, (0, -AIR_MARGIN[1] * 2 - FONT_SIZE_NAME))
 GOTE_NAME_COORD = add_c(GOTE_MOCHI_COORD, (0, MOCHI_SIZE[1]))
-TEXT_CHARS_PER_LINE = int(MOCHI_SIZE[0] / (FONT_SIZE / 2)) # the ' / 2' is based on the width of the char
-TEXT_SPACING = FONT_SIZE * 1.15
+def TEXT_SPACING(font_size):
+    return font_size * 1.15
+def TEXT_CHARS_PER_LINE(font_size):
+    return int(MOCHI_SIZE[0] / (font_size / 2))
 
 mochi_offsets = {
         'p': (0, 3), 'l': (1, 2), 'n': (0, 2), 's': (1, 1), 'g': (0, 1), 'b': (1, 0), 'r': (0, 0)
@@ -107,11 +110,33 @@ pieces_dict = {
         '+B': Image.open('pieces_ryoko1/Suma.png'),
     }
 
+meta_regexes = [
+        ['Start date', r'開始日時：(.*)'],
+        ['End date', r'終了日時：(.*)'],
+        ['Location', r'場所：(.*)'],
+        ['Time control', r'持ち時間：(.*)'],
+    ]
+
+replacements = [
+        ['秒', 's'],
+        ['分', 'm'],
+        ['時', 'h']
+    ]
+
+# fix wrap not treating \n as break
+def wrap_fix(s, n):
+    return '\n'.join(cjkwrap.wrap(s, n, replace_whitespace=False)).split('\n')
+
 
 def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1, start_delay=1, final_delay=5):
     if start > end:
         raise ValueError
-    kif = shogi.KIF.Parser.parse_str(re.sub(' +', ' ', input_kif))
+    kif = shogi.KIF.Parser.parse_str(re.sub(' +', ' ', input_kif))[0]
+    meta_regex_search = [[meta_regex[0], re.search(meta_regex[1], input_kif)] for meta_regex in meta_regexes]
+    kif['meta'] = [meta[0] + ': ' + meta[1][1] for meta in meta_regex_search if meta[1]]
+    for i in range(len(kif['meta'])):
+        for replacement in replacements:
+            kif['meta'][i] = kif['meta'][i].replace(replacement[0], replacement[1])
 
     # draw initial board
     empty_board = Image.new('RGBA', IMAGE_SIZE, '#EECA7E')
@@ -134,24 +159,25 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
         draw.line(add_c(line_start, BOARD_COORD) + add_c(line_end, BOARD_COORD), fill="#ffffff")
     """
 
-    font = ImageFont.truetype("assets/NotoSansMonoCJKjp-Regular.otf", FONT_SIZE)
+    font_name = ImageFont.truetype("assets/NotoSansMonoCJKjp-Regular.otf", FONT_SIZE_NAME)
+    font_meta = ImageFont.truetype("assets/NotoSansMonoCJKjp-Regular.otf", FONT_SIZE_META)
 
     board = shogi.Board()
     imgs = []
     num_moves = 0
-    
+
     if start <= num_moves and num_moves <= end:
-        img = render_position(str(board), empty_board.copy(), kif, font)
+        img = render_position(str(board), empty_board.copy(), kif, font_name, font_meta)
         imgs.append(array(img))
     num_moves += 1
 
     print('Turning positions to pngs...')
-    for move in kif[0]['moves']:
+    for move in kif['moves']:
         #print(move)
         board.push_usi(move)
         #print(board)
         if start <= num_moves and num_moves <= end:
-            img = render_position(str(board), empty_board.copy(), kif, font)
+            img = render_position(str(board), empty_board.copy(), kif, font_name, font_meta)
             imgs.append(array(img))
         num_moves += 1
     if not gif_filename:
@@ -171,7 +197,7 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
 
 
 
-def render_position(pos, board, kif, font):
+def render_position(pos, board, kif, font_name, font_meta):
     rows = pos.split('\n')
 
     # render bangoma
@@ -211,17 +237,27 @@ def render_position(pos, board, kif, font):
 
     # render text
     draw = ImageDraw.Draw(board)
-    sente_text = '|(' + kif[0]['names'][0]
-    sente_text_wrapped = cjkwrap.wrap(sente_text, TEXT_CHARS_PER_LINE)
+    sente_text = '|(' + kif['names'][0]
+    sente_text_wrapped = wrap_fix(sente_text, TEXT_CHARS_PER_LINE(FONT_SIZE_NAME))
     sente_text_wrapped[0] = sente_text_wrapped[0].replace('|(', '☗')
-    for i, text_line in enumerate(sente_text_wrapped):
-        draw.text(add_c(SENTE_NAME_COORD, (0, TEXT_SPACING * (i - len(sente_text_wrapped) + 1))), text_line, '#000', font=font)
 
-    gote_text = '|(' + kif[0]['names'][1]
-    gote_text_wrapped = cjkwrap.wrap(gote_text, TEXT_CHARS_PER_LINE)
+    for i, text_line in enumerate(sente_text_wrapped):
+        draw.text(add_c(SENTE_NAME_COORD, (0, TEXT_SPACING(FONT_SIZE_NAME) * (i - len(sente_text_wrapped) + 1))), text_line, '#000', font=font_name)
+
+    gote_text = '|(' + kif['names'][1]
+
+    gote_text_wrapped = wrap_fix(gote_text, TEXT_CHARS_PER_LINE(FONT_SIZE_NAME))
     gote_text_wrapped[0] = gote_text_wrapped[0].replace('|(', '☖')
-    for i, text_line in enumerate(gote_text_wrapped):
-        draw.text(add_c(GOTE_NAME_COORD, (0, TEXT_SPACING * i)), text_line, '#000', font=font)
+    coord = GOTE_NAME_COORD
+    for text_line in gote_text_wrapped:
+        draw.text(coord, text_line, '#000', font=font_name)
+        coord = add_c(coord, (0, TEXT_SPACING(FONT_SIZE_NAME)))
+
+    meta_with_newlines = ['', '', ''] + kif['meta']
+    meta_text_wrapped = sum([wrap_fix(meta_field, TEXT_CHARS_PER_LINE(FONT_SIZE_META)) for meta_field in meta_with_newlines], [])
+    for text_line in meta_text_wrapped:
+        draw.text(coord, text_line, '#000', font=font_meta)
+        coord = add_c(coord, (0, TEXT_SPACING(FONT_SIZE_META)))
 
 
     return board
