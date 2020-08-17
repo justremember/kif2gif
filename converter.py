@@ -64,6 +64,8 @@ def TEXT_SPACING(font_size):
 def TEXT_CHARS_PER_LINE(font_size):
     return int(MOCHI_SIZE[0] / (font_size / 2))
 
+TRANSPARENT_SQUARE_COLOR = (255, 160, 120, 120)
+
 mochi_offsets = {
         'p': (0, 3), 'l': (1, 2), 'n': (0, 2), 's': (1, 1), 'g': (0, 1), 'b': (1, 0), 'r': (0, 0)
 }
@@ -128,7 +130,7 @@ def wrap_fix(s, n):
     return '\n'.join(cjkwrap.wrap(s, n, replace_whitespace=False)).split('\n')
 
 
-def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1, start_delay=1.5, final_delay=5):
+def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, delay=1, start_delay=5, final_delay=5):
     if start > end:
         raise ValueError
     kif = shogi.KIF.Parser.parse_str(re.sub(' +', ' ', input_kif))[0]
@@ -141,10 +143,10 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
     # draw initial board
     empty_board = Image.new('RGBA', IMAGE_SIZE, '#EECA7E')
     ban = Image.open('assets/ban.png')
-    grid = Image.open('assets/grid.png')
+    #grid = Image.open('assets/grid.png')
     mochi = Image.open('assets/dai.png')
     empty_board.paste(ban, BOARD_COORD, ban)
-    empty_board.paste(grid, BOARD_COORD, grid)
+    #empty_board.paste(grid, BOARD_COORD, grid)
     empty_board.paste(mochi, SENTE_MOCHI_COORD, mochi)
     empty_board.paste(mochi, GOTE_MOCHI_COORD, mochi)
     """
@@ -177,7 +179,7 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
         board.push_usi(move)
         #print(board)
         if start <= num_moves and num_moves <= end:
-            img = render_position(str(board), empty_board.copy(), kif, font_name, font_meta)
+            img = render_position(str(board), empty_board.copy(), kif, font_name, font_meta, move)
             imgs.append(array(img))
         num_moves += 1
     if not gif_filename:
@@ -197,19 +199,35 @@ def kif2gif(input_kif, gif_dirname='', gif_filename='', start=0, end=999999, del
 
 
 
-def render_position(pos, board, kif, font_name, font_meta):
+def render_position(pos, board, kif, font_name, font_meta, move=None):
     rows = pos.split('\n')
 
     # render bangoma
+    move_coords = []
+    if move:
+        move_split = [move[:2], move[2:]]
+        for move_coord in move_split:
+            if '*' not in move_coord:
+                move_coords.append((9 - int(move_coord[0]), ord(move_coord[1]) - ord('a')))
+            else:
+                move_coords.append(move_coord[0].lower())
+
+    transparent_square = Image.new('RGBA', SQUARE_SIZE, TRANSPARENT_SQUARE_COLOR)
+
     for p_y in range(9):
         row = rows[p_y]
         row_pieces = [row[i:i+3] for i in range(0, len(row), 3)]
         for p_x in range(9):
             piece_image = pieces_dict[row_pieces[p_x].strip()]
+            piece_offset = mul_c((p_x, p_y), SQUARE_SIZE)
+            coord = add_c(CORNER_COORD, piece_offset)
+            if (p_x, p_y) in move_coords:
+                board.paste(transparent_square, coord, transparent_square)
             if piece_image:
-                piece_offset = mul_c((p_x, p_y), SQUARE_SIZE)
-                coord = add_c(CORNER_COORD, piece_offset)
                 board.paste(piece_image, coord, piece_image)
+
+    grid = Image.open('assets/grid.png')
+    board.paste(grid, BOARD_COORD, grid)
 
     # render mochigoma
     if len(rows) > 9:
